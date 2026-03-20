@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agencia Eros</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #eef2f3;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #7f8c8d;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dfe6e9;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            outline: none;
+            transition: 0.3s;
+            background: #fdfdfd;
+        }
+
+        input:focus {
+            border-color: #3498db;
+            background: #fff;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        #resultado {
+            margin-top: 25px;
+            border-top: 2px solid #f1f2f6;
+            padding-top: 20px;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f9f9f9;
+            align-items: center;
+        }
+
+        .highlight {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .total-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #3498db;
+        }
+
+        .warning {
+            color: #e67e22;
+            font-size: 0.85em;
+            margin-top: 15px;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+            text-align: center;
+            background: #fdf2f2;
+            padding: 10px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <h2>Eros - Calculador de Canjeos</h2>
+
+        <div class="input-group">
+            <label>Créditos en Monedero:</label>
+            <input type="number" id="monedero" placeholder="Ej: 690">
+        </div>
+
+        <div class="input-group">
+            <label>Créditos a Obtener en Inventario:</label>
+            <input type="number" id="objetivo" placeholder="Ej: 400">
+        </div>
+
+        <button onclick="calcularCanje()">Calcular</button>
+
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        const items = [
+            { nombre: "Lingo de $52", costo: 52, valor: 50 },
+            { nombre: "Saco de $21", costo: 21, valor: 20 },
+            { nombre: "Pack x10 Monedas de $11", costo: 11, valor: 10 },
+            { nombre: "Moneda de $11", costo: 11, valor: 10 },
+            { nombre: "Pack x5 Monedas de $6", costo: 6, valor: 5 },
+            { nombre: "Moneda de $6", costo: 6, valor: 5 },
+            { nombre: "Moneda de $2", costo: 2, valor: 1 }
+        ];
+
+        function calcularCanje() {
+            let monedero = parseInt(document.getElementById('monedero').value) || 0;
+            let objetivo = parseInt(document.getElementById('objetivo').value) || 0;
+            let resDiv = document.getElementById('resultado');
+
+            if (objetivo <= 0) {
+                resDiv.innerHTML = "<p class='error'>Ingresa un monto objetivo mayor a 0.</p>";
+                return;
+            }
+
+            let faltante = objetivo;
+            let costoTotalCreditos = 0;
+            let valorTotalCanjeado = 0;
+            let itemsAComprar = "";
+
+            // Lógica de optimización Greedy
+            items.forEach(item => {
+                // Evitamos duplicar Moneda vs Pack si valen lo mismo
+                if (item.nombre === "Moneda de $11" && faltante >= 10) return;
+                if (item.nombre === "Moneda de $6" && faltante >= 5) return;
+
+                let cantidad = Math.floor(faltante / item.valor);
+
+                // Si es el último recurso ($1), redondeamos para cubrir el objetivo
+                if (item.valor === 1 && faltante > 0) {
+                    cantidad = Math.ceil(faltante / item.valor);
+                }
+
+                if (cantidad > 0) {
+                    let costoItem = cantidad * item.costo;
+                    itemsAComprar += `
+                    <div class="item-row">
+                        <span>${item.nombre} x${cantidad}</span>
+                        <span class="highlight">Gasta ${costoItem} cred.</span>
+                    </div>`;
+                    costoTotalCreditos += costoItem;
+                    valorTotalCanjeado += (cantidad * item.valor);
+                    faltante -= (cantidad * item.valor);
+                }
+            });
+
+            let sobranteCanjeado = valorTotalCanjeado - objetivo;
+
+            if (costoTotalCreditos > monedero) {
+                resDiv.innerHTML = `<div class="error">⚠️ No alcanzan los créditos.<br>Necesitas ${costoTotalCreditos} y tienes ${monedero}.</div>`;
+            } else {
+                resDiv.innerHTML = `
+                <h3>Comprar lo siguiente:</h3>
+                ${itemsAComprar}
+                <div class="total-box">
+                    <div class="item-row" style="font-weight:bold; border:none; padding: 2px 0;">
+                        <span>Total a descontar:</span>
+                        <span>${costoTotalCreditos} créditos</span>
+                    </div>
+                    <div class="item-row" style="font-weight:bold; border:none; padding: 2px 0; color: #2980b9;">
+                        <span>Te quedarán en monedero:</span>
+                        <span>${monedero - costoTotalCreditos} créditos</span>
+                    </div>
+                    <div class="item-row" style="font-weight:bold; border:none; padding: 2px 0; color: #27ae60;">
+                        <span>Te sobrarán canjeados:</span>
+                        <span>$${sobranteCanjeado > 0 ? sobranteCanjeado : 0}</span>
+                    </div>
+                </div>
+                <p class="warning">Priorizando ítems grandes para ahorrar créditos.</p>
+            `;
+            }
+        }
+    </script>
+
+</body>
+
+</html>
